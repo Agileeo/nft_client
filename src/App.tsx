@@ -7,6 +7,8 @@ import MarketPlaceSalePage from './pages/MarketPlaceSale';
 import HomePage from './pages/Home';
 import ProtectedRoute from './components/ProtectedRoute';
 import MonitoringPage from './pages/Monitoring';
+import MintNFT from './pages/MintNFT';
+import { WalletProvider } from './context';
 
 function App() {
   const [isConnected, setIsConnected] = useState(false);
@@ -16,48 +18,58 @@ function App() {
   };
 
   return (
-    <Router>
-      <div className="App">
-        <header className="bg-gray-900 text-white p-4">
-          <h1 className="text-3xl font-bold">2Crypto Marketplace</h1>
-          <WalletConnect 
-            onConnect={() => setIsConnected(true)} 
-            onDisconnect={handleDisconnect}
-          />
-        </header>
-        <Navigation isConnected={isConnected} />
-        <main className="p-4">
-          <Routes>
-            <Route path="/" element={<HomePage />} />
-            <Route 
-              path="/mint" 
-              element={
-                <ProtectedRoute isConnected={isConnected}>
-                  <NFTCorePage />
-                </ProtectedRoute>
-              } 
+    <WalletProvider>
+      <Router>
+        <div className="App">
+          <header className="bg-gray-900 text-white p-4">
+            <h1 className="text-3xl font-bold">2Crypto Marketplace</h1>
+            <WalletConnect 
+              onConnect={() => setIsConnected(true)} 
+              onDisconnect={handleDisconnect}
             />
-            <Route 
-              path="/marketplace" 
-              element={
-                <ProtectedRoute isConnected={isConnected}>
-                  <MarketPlaceSalePage />
-                </ProtectedRoute>
-              } 
-            />
-            <Route 
-              path="/monitor" 
-              element={
-                <ProtectedRoute isConnected={isConnected}>
-                  <MonitoringPage />
-                </ProtectedRoute>
-              } 
-            />
-            <Route path="*" element={<Navigate to="/" replace />} />
-          </Routes>
-        </main>
-      </div>
-    </Router>
+          </header>
+          <Navigation isConnected={isConnected} />
+          <main className="p-4">
+            <Routes>
+              <Route path="/" element={<HomePage />} />
+              <Route 
+                path="/mint" 
+                element={
+                  <ProtectedRoute isConnected={isConnected}>
+                    <MintNFT />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="/nft-core" 
+                element={
+                  <ProtectedRoute isConnected={isConnected}>
+                    <NFTCorePage />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="/marketplace" 
+                element={
+                  <ProtectedRoute isConnected={isConnected}>
+                    <MarketPlaceSalePage />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="/monitor" 
+                element={
+                  <ProtectedRoute isConnected={isConnected}>
+                    <MonitoringPage />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route path="*" element={<Navigate to="/" replace />} />
+            </Routes>
+          </main>
+        </div>
+      </Router>
+    </WalletProvider>
   );
 }
 
