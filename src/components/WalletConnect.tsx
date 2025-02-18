@@ -67,13 +67,9 @@ const WalletConnect: React.FC<WalletConnectProps> = ({ onConnect, onDisconnect }
       try {
         await window.ethereum.request({ method: 'eth_requestAccounts' });
         const network = isTestnet ? AVALANCHE_TESTNET : AVALANCHE_MAINNET;
-        await switchNetwork(network.chainId);
+        await switchNetwork(Number(network.chainId));
         
-        const provider = new BrowserProvider(
-          window.ethereum, 
-          getProviderOptions(network.chainId)
-        );
-        
+        const provider = new BrowserProvider(window.ethereum);
         await provider.getNetwork(); // Verify network connection
         const accounts = await window.ethereum.request({ method: 'eth_accounts' });
         setIsConnected(true);
@@ -98,7 +94,13 @@ const WalletConnect: React.FC<WalletConnectProps> = ({ onConnect, onDisconnect }
         const network = isTestnet ? AVALANCHE_TESTNET : AVALANCHE_MAINNET;
         await window?.ethereum?.request({
           method: 'wallet_addEthereumChain',
-          params: [network],
+          params: [{
+            chainId: `0x${Number(network.chainId).toString(16)}`,
+            chainName: network.chainName,
+            nativeCurrency: network.nativeCurrency,
+            rpcUrls: network.rpcUrls,
+            blockExplorerUrls: network.blockExplorerUrls
+          }],
         });
       }
     }

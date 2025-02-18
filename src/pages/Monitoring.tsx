@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ethers, BrowserProvider, Contract } from 'ethers';
+import { ethers, BrowserProvider, Contract, JsonRpcProvider } from 'ethers';
 import NFTCoreABI from '../contracts/NFTCore.json';
 import { getNetworkConfig, getProviderOptions } from '../constants/networks';
 
@@ -18,47 +18,75 @@ const MonitoringPage: React.FC = () => {
     fetchContractInfo();
   }, []);
 
+  const formatError = (error: any): string => {
+    if (error.code === 'CALL_EXCEPTION') {
+      return 'Failed to connect to the contract. Please verify the contract address and network.';
+    }
+    if (error.message && error.message.includes('sending a transaction requires a signer')) {
+      return 'Provider connection error. Please connect your wallet.';
+    }
+    return error instanceof Error ? error.message : 'An unknown error occurred';
+  };
+
+  const getProvider = async () => {
+    const chainId = 43113; // Testnet
+    const networkConfig = getNetworkConfig(chainId);
+
+    if (window.ethereum) {
+      try {
+        const provider = new BrowserProvider(window.ethereum);
+        await window.ethereum.request({
+          method: 'wallet_switchEthereumChain',
+          params: [{ chainId: `0x${chainId.toString(16)}` }],
+        });
+        return provider;
+      } catch (error) {
+        console.warn('Wallet connection failed, falling back to RPC:', error);
+      }
+    }
+
+    return new JsonRpcProvider(networkConfig.rpcUrls[0]);
+  };
+
   const fetchContractInfo = async () => {
+    setLoading(true);
+    setError(null);
+
     try {
       const contractAddress = process.env.REACT_APP_NFTCORE_CONTRACT_ADDRESS;
       if (!contractAddress) {
         throw new Error('Contract address is not configured');
       }
 
-      let provider;
-      const chainId = 43113; // Testnet
-
-      if (window.ethereum) {
-        provider = new BrowserProvider(window.ethereum, getProviderOptions(chainId));
-      } else if (process.env.REACT_APP_RPC_URL) {
-        provider = new ethers.JsonRpcProvider(
-          process.env.REACT_APP_RPC_URL,
-          getNetworkConfig(chainId)
-        );
-      } else {
-        throw new Error('No Web3 Provider detected and RPC URL not configured');
-      }
-
+      const provider = await getProvider();
       const contract = new Contract(contractAddress, NFTCoreABI.abi, provider);
 
-      const [name, symbol, totalSupply, owner] = await Promise.all([
+      const results = await Promise.allSettled([
         contract.name(),
         contract.symbol(),
         contract.totalSupply(),
         contract.owner()
       ]);
 
+      const [name, symbol, totalSupply, owner] = results.map((result, index) => {
+        if (result.status === 'rejected') {
+          console.error(`Failed to fetch data for index ${index}:`, result.reason);
+          return '';
+        }
+        return result.value;
+      });
+
       setContractInfo(prev => ({
         ...prev,
-        name,
-        symbol,
-        totalSupply: totalSupply.toString(),
-        owner
+        name: name || 'N/A',
+        symbol: symbol || 'N/A',
+        totalSupply: totalSupply ? totalSupply.toString() : 'N/A',
+        owner: owner || 'N/A'
       }));
-      setLoading(false);
     } catch (err) {
       console.error('Error fetching contract info:', err);
-      setError(err instanceof Error ? err.message : 'Failed to fetch contract information');
+      setError(formatError(err));
+    } finally {
       setLoading(false);
     }
   };
